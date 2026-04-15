@@ -1,0 +1,131 @@
+name: Build Arch Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git python python-pillow
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create build user (makepkg can't run as root)
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Build package
+        run: |
+          # Create a PKGBUILD that builds from local source
+          cat > PKGBUILD.local << 'PKGBUILD_EOF'
+          # Maintainer: carlos-garcia <carlos.garcia83@gmail.com>
+          pkgname=piuio2key
+          pkgver=${GITHUB_REF_NAME#v}
+          pkgrel=1
+          pkgdesc="PIU IO Bridge - Maps PIUIO/LXIO arcade inputs to keyboard events"
+          arch=('any')
+          url="https://github.com/carlos-garcia/PIUIO2Key-Linux"
+          license=('MIT')
+          depends=(
+              'python'
+              'python-evdev'
+              'python-pyusb'
+          )
+          optdepends=(
+              'python-pystray: System tray icon support'
+              'python-pillow: Icon generation'
+          )
+          
+          package() {
+              cd "$startdir"
+              
+              # Install Python package
+              install -dm755 "$pkgdir/usr/lib/$pkgname"
+              cp -r piubridge "$pkgdir/usr/lib/$pkgname/"
+              install -Dm755 piu_bridge.py "$pkgdir/usr/lib/$pkgname/piu_bridge.py"
+              install -Dm644 default.ini "$pkgdir/usr/lib/$pkgname/default.ini"
+              
+              # Install launcher script
+              install -dm755 "$pkgdir/usr/bin"
+              cat > "$pkgdir/usr/bin/$pkgname" << 'EOF'
+          #!/bin/bash
+          exec python3 /usr/lib/piuio2key/piu_bridge.py "$@"
+          EOF
+              chmod 755 "$pkgdir/usr/bin/$pkgname"
+              
+              # Install udev rules
+              install -Dm644 /dev/stdin "$pkgdir/usr/lib/udev/rules.d/99-piuio.rules" << 'EOF'
+          # PIUIO/LXIO arcade IO boards — allow user access to USB device nodes
+          SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1002", MODE="0666"
+          SUBSYSTEM=="usb", ATTR{idVendor}=="0d2f", ATTR{idProduct}=="1010", MODE="0666"
+          SUBSYSTEM=="usb", ATTR{idVendor}=="0d2f", ATTR{idProduct}=="1020", MODE="0666"
+          SUBSYSTEM=="usb", ATTR{idVendor}=="0d2f", ATTR{idProduct}=="1040", MODE="0666"
+          KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+          EOF
+
+              # Install modules-load.d config
+              install -Dm644 /dev/stdin "$pkgdir/usr/lib/modules-load.d/$pkgname.conf" << 'EOF'
+          uinput
+          EOF
+
+              # Install desktop file
+              install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/$pkgname.desktop" << 'EOF'
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=PIU IO Bridge
+          Comment=Map arcade pad inputs to keyboard
+          Exec=/usr/bin/piuio2key --gui
+          Icon=piuio2key
+          Terminal=false
+          Categories=Game;Utility;
+          Keywords=piu;pump;arcade;dance;
+          EOF
+
+              # Generate and install icon
+              if [ -f piubridge/gui/make_icon.py ]; then
+                  python3 piubridge/gui/make_icon.py || true
+                  if [ -f piubridge/gui/icon.png ]; then
+                      install -Dm644 piubridge/gui/icon.png "$pkgdir/usr/share/pixmaps/$pkgname.png"
+                  fi
+              fi
+          }
+          PKGBUILD_EOF
+          
+          # Replace version placeholder with actual version
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/\${GITHUB_REF_NAME#v}/$VERSION/" PKGBUILD.local
+          mv PKGBUILD.local PKGBUILD
+          
+          # Copy install script
+          cp piuio2key.install . 2>/dev/null || true
+          
+          # Build as non-root user
+          su builder -c "makepkg -sf --noconfirm"
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Upload package to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.pkg.tar.zst"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact (for manual builds)
+        uses: actions/upload-artifact@v4
+        with:
+          name: piuio2key-arch-package
+          path: "*.pkg.tar.zst"

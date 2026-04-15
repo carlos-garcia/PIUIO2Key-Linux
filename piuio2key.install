@@ -1,0 +1,24 @@
+post_install() {
+    echo "==> Loading uinput kernel module..."
+    modprobe uinput 2>/dev/null || true
+    
+    echo "==> Reloading udev rules..."
+    udevadm control --reload-rules
+    udevadm trigger
+    
+    echo ""
+    echo "==> IMPORTANT: Add your user to the 'input' group to use without sudo:"
+    echo "    sudo usermod -a -G input \$USER"
+    echo "    Then log out and back in for the change to take effect."
+    echo ""
+    echo "==> Run 'piuio2key' or launch 'PIU IO Bridge' from your app menu."
+}
+
+post_upgrade() {
+    post_install
+}
+
+post_remove() {
+    echo "==> udev rules removed. You may want to reload rules:"
+    echo "    sudo udevadm control --reload-rules"
+}
