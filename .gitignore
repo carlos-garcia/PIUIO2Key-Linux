@@ -18,4 +18,11 @@ Thumbs.db
 
 # Build artifacts
 build/
+
+# makepkg build artifacts
+src/
+pkg/
+*.pkg.tar.zst
+*.pkg.tar.xz
+piuio2key-*.tar.gz
 dist/
