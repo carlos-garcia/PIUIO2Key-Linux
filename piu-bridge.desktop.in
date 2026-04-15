@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=PIU IO Bridge
+GenericName=Arcade Pad Bridge
+Comment=PIUIO/LXIO to keyboard bridge with system tray and diagnostics
+Exec=@PYTHON@ "@SCRIPT@"
+Path=@HERE@
+Icon=@ICON@
+Terminal=false
+Categories=Game;Utility;
+StartupNotify=false
+Keywords=piu;pump;arcade;dance;lxio;piuio;
