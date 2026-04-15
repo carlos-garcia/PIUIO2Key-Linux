@@ -41,12 +41,35 @@ Use `--dump` to see what your hardware sends.
 
 ## Quick start
 
-### 1. Dependencies
+### Arch / CachyOS (easiest)
+
+Download and install the pre-built package from the [releases page](https://github.com/carlos-garcia/PIUIO2Key-Linux/releases):
 
 ```bash
-# Arch / CachyOS
-sudo pacman -S python python-pyusb python-evdev python-pyqt6
+# Download the latest release
+curl -LO https://github.com/carlos-garcia/PIUIO2Key-Linux/releases/download/v1.0.0/piuio2key-1.0.0-1-any.pkg.tar.zst
 
+# Install
+sudo pacman -U piuio2key-1.0.0-1-any.pkg.tar.zst
+```
+
+Or build from the PKGBUILD:
+
+```bash
+git clone https://github.com/carlos-garcia/PIUIO2Key-Linux.git
+cd PIUIO2Key-Linux
+makepkg -si
+```
+
+After installation, **log out and back in** (to apply the `input` group), then run `piuio2key` or launch "PIU IO Bridge" from your app menu.
+
+---
+
+### Other distros (manual install)
+
+#### 1. Dependencies
+
+```bash
 # Debian / Ubuntu
 sudo apt install python3 python3-usb python3-evdev python3-pyqt6
 
@@ -62,10 +85,9 @@ pip install -r requirements.txt
 pip install PyQt6
 ```
 
-### 2. Grant device access (udev rules)
+#### 2. Grant device access (udev rules)
 
 ```bash
-cd linux/
 ./install-udev.sh
 ```
 
@@ -77,7 +99,7 @@ This:
 
 **After logging out and back in**, unplug and replug the pad.
 
-### 3. Verify the device is visible
+#### 3. Verify the device is visible
 
 ```bash
 python3 piu_bridge.py --detect
@@ -85,7 +107,7 @@ python3 piu_bridge.py --detect
 #   Found LXIO v1 (Andamiro PIU HID) — lxio mode (direct USB)
 ```
 
-### 4. Run the bridge
+#### 4. Run the bridge
 
 ```bash
 python3 piu_bridge.py
@@ -95,7 +117,7 @@ You should see a PIU icon appear in your system tray. Right-click it for
 **Status**, **Key Mapping**, **Diagnostics**, and **Exit**. Step on the pad
 → keys are emitted (open a text editor to verify).
 
-### 5. Install a desktop launcher (optional)
+#### 5. Install a desktop launcher (optional)
 
 ```bash
 ./install-launcher.sh
