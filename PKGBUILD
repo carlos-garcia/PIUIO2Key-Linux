@@ -1,6 +1,6 @@
 # Maintainer: carlos-garcia <carlos.garcia83@gmail.com>
 pkgname=piuio2key
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="PIU IO Bridge - Maps PIUIO/LXIO arcade inputs to keyboard events"
 arch=('any')
@@ -17,7 +17,7 @@ optdepends=(
 )
 install="$pkgname.install"
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('7092ce8619c3f06e724ec1418aae7dacef3e6db81ad2beee6d661165a966f26f')
+sha256sums=('a6211ea6414aa16ebcfc391943505b9c89ba8e6fd6806580ee8fbe4a5422cd07')
 
 # For git version, use this instead:
 # source=("git+$url.git")

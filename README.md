@@ -47,10 +47,10 @@ Download and install the pre-built package from the [releases page](https://gith
 
 ```bash
 # Download the latest release
-curl -LO https://github.com/carlos-garcia/PIUIO2Key-Linux/releases/download/v1.0.0/piuio2key-1.0.0-1-any.pkg.tar.zst
+curl -LO https://github.com/carlos-garcia/PIUIO2Key-Linux/releases/download/v1.0.1/piuio2key-1.0.1-1-any.pkg.tar.zst
 
 # Install
-sudo pacman -U piuio2key-1.0.0-1-any.pkg.tar.zst
+sudo pacman -U piuio2key-1.0.1-1-any.pkg.tar.zst
 ```
 
 Or build from the PKGBUILD:
