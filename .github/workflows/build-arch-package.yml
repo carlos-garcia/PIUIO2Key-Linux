@@ -87,7 +87,7 @@ jobs:
           Type=Application
           Name=PIU IO Bridge
           Comment=Map arcade pad inputs to keyboard
-          Exec=/usr/bin/piuio2key --gui
+          Exec=/usr/bin/piuio2key
           Icon=piuio2key
           Terminal=false
           Categories=Game;Utility;
