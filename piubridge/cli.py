@@ -31,10 +31,10 @@ def _build_parser():
                         help="Print active key mapping and exit")
     parser.add_argument("--no-tray", action="store_true",
                         help="Disable system tray icon (terminal-only mode)")
-    parser.add_argument("--lights", action="store_true",
-                        help="Enable reactive lights (PIUIO only: panels light when pressed)")
+    parser.add_argument("--no-lights", action="store_true",
+                        help="Disable reactive lights (panels light when pressed)")
     parser.add_argument("--test-lights", action="store_true",
-                        help="Turn ALL lights on for testing (PIUIO only, then exit)")
+                        help="Turn ALL lights on for testing, then exit")
     return parser
 
 
@@ -155,11 +155,13 @@ def main():
         and gui.has_display()
     )
 
+    reactive_lights = not args.no_lights
+
     if use_tray:
         print("Starting with system tray icon (use --no-tray to disable)")
         return gui.run_tray(keymap, args.poll_hz, backend=backend,
-                            reactive_lights=args.lights)
+                            reactive_lights=reactive_lights)
 
     if backend == "piuio":
-        return run_bridge_piuio(keymap, args.poll_hz, reactive_lights=args.lights)
-    return run_bridge_lxio(keymap, args.poll_hz, reactive_lights=args.lights)
+        return run_bridge_piuio(keymap, args.poll_hz, reactive_lights=reactive_lights)
+    return run_bridge_lxio(keymap, args.poll_hz, reactive_lights=reactive_lights)
