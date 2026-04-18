@@ -31,6 +31,10 @@ def _build_parser():
                         help="Print active key mapping and exit")
     parser.add_argument("--no-tray", action="store_true",
                         help="Disable system tray icon (terminal-only mode)")
+    parser.add_argument("--lights", action="store_true",
+                        help="Enable reactive lights (PIUIO only: panels light when pressed)")
+    parser.add_argument("--test-lights", action="store_true",
+                        help="Turn ALL lights on for testing (PIUIO only, then exit)")
     return parser
 
 
@@ -71,6 +75,55 @@ def main():
         print_keymap(keymap)
         return 0
 
+    if args.test_lights:
+        if not backend:
+            print("ERROR: No PIUIO/LXIO USB device found for light test.")
+            return 1
+        # Turn on ALL panel lights (P1 bits 2-6, P2 bits 18-22)
+        all_lights = 0x007C007C
+        print(f"Turning on ALL lights (light_data = 0x{all_lights:08x})")
+        print("Press Ctrl+C to stop...")
+        import time
+        
+        if backend == "piuio":
+            from .piuio import PiuioDevice
+            dev = PiuioDevice()
+            if not dev.open():
+                print("ERROR: Could not open PIUIO USB device.")
+                return 1
+            try:
+                while True:
+                    for i in range(4):
+                        out_data = (all_lights & 0xFFFCFFFC) | (i | (i << 16))
+                        out = out_data.to_bytes(4, "little").ljust(8, b"\x00")
+                        dev.dev.ctrl_transfer(0x40, 0xAE, 0, 0, out, 10)
+                        dev.dev.ctrl_transfer(0xC0, 0xAE, 0, 0, 8, 10)
+                    time.sleep(0.001)
+            except KeyboardInterrupt:
+                # Turn off lights
+                for i in range(4):
+                    out = (i | (i << 16)).to_bytes(4, "little").ljust(8, b"\x00")
+                    dev.dev.ctrl_transfer(0x40, 0xAE, 0, 0, out, 10)
+                print("\nLights off.")
+            dev.close()
+        else:  # lxio
+            from .lxio import LxioDevice, LXIO_ENDPOINT_OUT
+            dev = LxioDevice()
+            if not dev.open():
+                print("ERROR: Could not open LXIO USB device.")
+                return 1
+            try:
+                while True:
+                    out = all_lights.to_bytes(4, "little").ljust(16, b"\x00")
+                    dev.dev.write(LXIO_ENDPOINT_OUT, out, 100)
+                    time.sleep(0.01)
+            except KeyboardInterrupt:
+                # Turn off lights
+                dev.dev.write(LXIO_ENDPOINT_OUT, bytes(16), 100)
+                print("\nLights off.")
+            dev.close()
+        return 0
+
     if not backend:
         msg_lines = [
             "No PIUIO/LXIO USB devices found!",
@@ -104,8 +157,9 @@ def main():
 
     if use_tray:
         print("Starting with system tray icon (use --no-tray to disable)")
-        return gui.run_tray(keymap, args.poll_hz, backend=backend)
+        return gui.run_tray(keymap, args.poll_hz, backend=backend,
+                            reactive_lights=args.lights)
 
     if backend == "piuio":
-        return run_bridge_piuio(keymap, args.poll_hz)
-    return run_bridge_lxio(keymap, args.poll_hz)
+        return run_bridge_piuio(keymap, args.poll_hz, reactive_lights=args.lights)
+    return run_bridge_lxio(keymap, args.poll_hz, reactive_lights=args.lights)

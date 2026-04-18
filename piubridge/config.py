@@ -93,3 +93,33 @@ PIUIO_BIT_LAYOUT = {
     "MAP_CONFIG":  9,  # TEST
     "MAP_SERVICE": 14, # SERVICE
 }
+
+# --- PIUIO light output bit positions ---
+# Light bits in the 32-bit output word sent with each poll.
+# Panel lights are shifted +2 from sensor positions.
+PIUIO_LIGHT_BITS = {
+    "1P_UL":  2,   # P1 Upper Left
+    "1P_UR":  3,   # P1 Upper Right
+    "1P_CTR": 4,   # P1 Center
+    "1P_DL":  5,   # P1 Down Left
+    "1P_DR":  6,   # P1 Down Right
+    "2P_UL":  18,  # P2 Upper Left
+    "2P_UR":  19,  # P2 Upper Right
+    "2P_CTR": 20,  # P2 Center
+    "2P_DL":  21,  # P2 Down Left
+    "2P_DR":  22,  # P2 Down Right
+}
+
+# Mapping from input bit position to light bit position
+PIUIO_INPUT_TO_LIGHT = {
+    0: 2,   # P1 UL sensor -> P1 UL light
+    1: 3,   # P1 UR sensor -> P1 UR light
+    2: 4,   # P1 CTR sensor -> P1 CTR light
+    3: 5,   # P1 DL sensor -> P1 DL light
+    4: 6,   # P1 DR sensor -> P1 DR light
+    16: 18, # P2 UL sensor -> P2 UL light
+    17: 19, # P2 UR sensor -> P2 UR light
+    18: 20, # P2 CTR sensor -> P2 CTR light
+    19: 21, # P2 DL sensor -> P2 DL light
+    20: 22, # P2 DR sensor -> P2 DR light
+}

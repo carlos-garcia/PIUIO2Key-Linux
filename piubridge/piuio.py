@@ -16,6 +16,9 @@ PIUIO_PID = 0x1002
 PIUIO_CTL_REQ = 0xAE
 REQ_TIMEOUT = 10  # ms
 
+# Mask for P1 (bits 0-4) and P2 (bits 16-20) panel sensors
+PANEL_MASK = 0x001F001F
+
 
 def find_piuio():
     """Check if a PIUIO is on the USB bus. Returns True/False."""
@@ -32,6 +35,7 @@ class PiuioDevice:
     def __init__(self):
         self.dev = None
         self.light_data = 0
+        self.reactive_lights = False
 
     def open(self):
         """Find and claim the PIUIO USB device. Returns True on success."""
@@ -57,6 +61,17 @@ class PiuioDevice:
             except Exception:
                 pass
             self.dev = None
+
+    def set_lights_from_input(self, combined):
+        """Set light bits based on sensor input state.
+
+        Matches Windows io2key: m_iLightData = (m_iInputField & 0x001F001F) << 2
+        Panel sensor bits 0-4 (P1) and 16-20 (P2) map to light bits 2-6 and 18-22.
+        """
+        if not self.reactive_lights:
+            return
+        # Exactly match Windows: mask panel bits, shift by 2 for light output bits
+        self.light_data = (combined & PANEL_MASK) << 2
 
     def poll(self):
         """One poll cycle: 4 sensor-mux reads combined into a 32-bit field.

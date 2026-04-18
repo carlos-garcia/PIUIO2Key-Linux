@@ -14,10 +14,14 @@ import usb.core
 import usb.util
 
 LXIO_VID = 0x0D2F
-LXIO_PIDS = (0x1020, 0x1040)
+LXIO_PIDS = (0x1010, 0x1020, 0x1040)  # 0x1010 = PIUIO Button, 0x1020 = LXIO v1, 0x1040 = LXIO v2
 LXIO_ENDPOINT_IN = 0x81
+LXIO_ENDPOINT_OUT = 0x02
 LXIO_PACKET_SIZE = 16
 LXIO_TIMEOUT = 1000  # ms
+
+# Mask for P1 (bits 0-4) and P2 (bits 16-20) panel sensors
+PANEL_MASK = 0x001F001F
 
 
 def find_lxio():
@@ -38,6 +42,8 @@ class LxioDevice:
     def __init__(self):
         self.dev = None
         self.pid = None
+        self.light_data = 0
+        self.reactive_lights = False
 
     def open(self):
         """Find and claim the LXIO USB device. Returns True on success."""
@@ -76,6 +82,33 @@ class LxioDevice:
             return None
         except usb.core.USBError:
             return None
+
+    def write_lights(self):
+        """Write light data to the interrupt OUT endpoint."""
+        if not self.reactive_lights:
+            return
+        try:
+            # First 4 bytes are light data, rest is zeros
+            out = self.light_data.to_bytes(4, "little").ljust(16, b"\x00")
+            self.dev.write(LXIO_ENDPOINT_OUT, out, LXIO_TIMEOUT)
+        except usb.core.USBError:
+            pass
+
+    def set_lights_from_input(self, data):
+        """Set light bits based on sensor input state.
+
+        Matches Windows: m_iLightData = (m_iInputField & 0x001F001F) << 2
+        """
+        if not self.reactive_lights:
+            return
+        # Extract P1 (byte 0, bits 0-4) and P2 (byte 4, bits 0-4) sensor state
+        # Active-low: bit=0 means pressed, so invert
+        p1 = (~data[0]) & 0x1F
+        p2 = (~data[4]) & 0x1F
+        combined = p1 | (p2 << 16)
+        # Shift by 2 to get light bits (same as PIUIO)
+        self.light_data = (combined & PANEL_MASK) << 2
+        self.write_lights()
 
     def description(self):
         """Human-readable device description."""

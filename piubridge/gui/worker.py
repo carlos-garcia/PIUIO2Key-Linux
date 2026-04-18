@@ -27,11 +27,12 @@ class BridgeWorker(QThread):
     error_occurred = pyqtSignal(str)
     state_updated = pyqtSignal(int)
 
-    def __init__(self, keymap, poll_hz, backend="lxio"):
+    def __init__(self, keymap, poll_hz, backend="lxio", reactive_lights=False):
         super().__init__()
         self.keymap = keymap
         self.poll_hz = poll_hz
         self.backend = backend
+        self.reactive_lights = reactive_lights
         self._running = True
 
     def stop(self):
@@ -62,6 +63,7 @@ class BridgeWorker(QThread):
             return
 
         dev = LxioDevice()
+        dev.reactive_lights = self.reactive_lights
         if not dev.open():
             self.error_occurred.emit(
                 "Could not open LXIO USB device.\n"
@@ -79,8 +81,9 @@ class BridgeWorker(QThread):
         poll_interval = 1.0 / self.poll_hz if self.poll_hz > 0 else 0
         prev_state = 0
 
+        lights_str = " + lights" if self.reactive_lights else ""
         self.status_changed.emit(
-            f"Running - {dev.description()} ({len(table)} inputs)"
+            f"Running - {dev.description()} ({len(table)} inputs){lights_str}"
         )
 
         try:
@@ -88,6 +91,9 @@ class BridgeWorker(QThread):
                 data = dev.read()
                 if data is None:
                     continue
+
+                # Update lights based on input state
+                dev.set_lights_from_input(data)
 
                 state = extract_state(data, table)
                 changed = state ^ prev_state
@@ -125,6 +131,7 @@ class BridgeWorker(QThread):
             return
 
         dev = PiuioDevice()
+        dev.reactive_lights = self.reactive_lights
         if not dev.open():
             self.error_occurred.emit(
                 "Could not open PIUIO USB device.\n"
@@ -142,13 +149,18 @@ class BridgeWorker(QThread):
         poll_interval = 1.0 / self.poll_hz if self.poll_hz > 0 else 0
         prev_state = 0
 
+        lights_str = " + lights" if self.reactive_lights else ""
         self.status_changed.emit(
-            f"Running - PIUIO direct USB ({len(table)} inputs)"
+            f"Running - PIUIO direct USB ({len(table)} inputs){lights_str}"
         )
 
         try:
             while self._running:
                 combined = dev.poll()
+                
+                # Update lights based on input state
+                dev.set_lights_from_input(combined)
+                
                 state = extract_piuio_state(combined, table)
                 changed = state ^ prev_state
 

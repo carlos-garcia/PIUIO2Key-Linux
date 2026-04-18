@@ -79,8 +79,13 @@ def run_dump_lxio():
         dev.close()
 
 
-def run_bridge_lxio(keymap, poll_hz):
+def run_bridge_lxio(keymap, poll_hz, reactive_lights=False):
     """Bridge loop for LXIO boards (pyusb interrupt transfers).
+
+    Args:
+        keymap: Key mapping dictionary
+        poll_hz: Poll rate in Hz (0 for max speed)
+        reactive_lights: If True, pad lights illuminate when pressed
 
     Returns 0 on clean shutdown, 1 on error.
     """
@@ -92,6 +97,7 @@ def run_bridge_lxio(keymap, poll_hz):
         return 1
 
     dev = LxioDevice()
+    dev.reactive_lights = reactive_lights
     if not dev.open():
         print("ERROR: Could not open LXIO USB device.")
         print("Is it plugged in? Do you have permission? (see install-udev.sh)")
@@ -103,6 +109,8 @@ def run_bridge_lxio(keymap, poll_hz):
 
     print(f"LXIO mode (direct USB) — {dev.description()}")
     print(f"Poll rate: {'max (tight loop)' if poll_hz == 0 else f'{poll_hz} Hz'}")
+    if reactive_lights:
+        print("Reactive lights: ENABLED (pads light up when pressed)")
     print(f"Mapped {len(table)} inputs")
     print("--- Bridge Running (Ctrl+C to stop) ---\n")
 
@@ -111,6 +119,9 @@ def run_bridge_lxio(keymap, poll_hz):
             data = dev.read()
             if data is None:
                 continue
+
+            # Update lights based on input state
+            dev.set_lights_from_input(data)
 
             state = extract_state(data, table)
             changed = state ^ prev_state
@@ -171,8 +182,13 @@ def run_dump_piuio():
         dev.close()
 
 
-def run_bridge_piuio(keymap, poll_hz):
+def run_bridge_piuio(keymap, poll_hz, reactive_lights=False):
     """Bridge loop for PIUIO boards (pyusb vendor control transfers).
+
+    Args:
+        keymap: Key mapping dictionary
+        poll_hz: Poll rate in Hz (0 for max speed)
+        reactive_lights: If True, pad lights illuminate when pressed
 
     Returns 0 on clean shutdown, 1 on error.
     """
@@ -184,6 +200,7 @@ def run_bridge_piuio(keymap, poll_hz):
         return 1
 
     dev = PiuioDevice()
+    dev.reactive_lights = reactive_lights
     if not dev.open():
         print("ERROR: Could not open PIUIO USB device.")
         print("Is it plugged in? Do you have permission? (see install-udev.sh)")
@@ -195,12 +212,18 @@ def run_bridge_piuio(keymap, poll_hz):
 
     print("PIUIO mode (direct USB)")
     print(f"Poll rate: {'max (tight loop)' if poll_hz == 0 else f'{poll_hz} Hz'}")
+    if reactive_lights:
+        print("Reactive lights: ENABLED (pads light up when pressed)")
     print(f"Mapped {len(table)} inputs")
     print("--- Bridge Running (Ctrl+C to stop) ---\n")
 
     try:
         while True:
             combined = dev.poll()
+            
+            # Update lights based on input state
+            dev.set_lights_from_input(combined)
+            
             state = extract_piuio_state(combined, table)
             changed = state ^ prev_state
 

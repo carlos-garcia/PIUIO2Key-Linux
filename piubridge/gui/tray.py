@@ -67,7 +67,7 @@ def _build_keymap_menu(keymap):
     return keymap_menu
 
 
-def run_tray(keymap, poll_hz, backend="lxio"):
+def run_tray(keymap, poll_hz, backend="lxio", reactive_lights=False):
     """Run the bridge with a KDE system tray icon."""
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
@@ -76,9 +76,9 @@ def run_tray(keymap, poll_hz, backend="lxio"):
         print("System tray not available, falling back to terminal mode")
         if backend == "piuio":
             from ..bridge import run_bridge_piuio
-            return run_bridge_piuio(keymap, poll_hz)
+            return run_bridge_piuio(keymap, poll_hz, reactive_lights=reactive_lights)
         from ..bridge import run_bridge_lxio
-        return run_bridge_lxio(keymap, poll_hz)
+        return run_bridge_lxio(keymap, poll_hz, reactive_lights=reactive_lights)
 
     tray = QSystemTrayIcon(make_tray_icon())
     tray.setToolTip("PIU IO Bridge - Starting...")
@@ -114,7 +114,8 @@ def run_tray(keymap, poll_hz, backend="lxio"):
     tray.show()
 
     # Background worker
-    worker = BridgeWorker(keymap, poll_hz, backend=backend)
+    worker = BridgeWorker(keymap, poll_hz, backend=backend,
+                          reactive_lights=reactive_lights)
 
     def on_status(msg):
         status_action.setText(f"Status: {msg}")
